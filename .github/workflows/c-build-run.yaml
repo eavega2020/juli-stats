@@ -1,0 +1,65 @@
+name: Build & Run C
+
+on:
+  push:
+    paths: ["**.c"]
+  pull_request:
+    paths: ["**.c"]
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "C source file to compile (relative path)"
+        required: false
+        default: "main.c"
+
+jobs:
+  build-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [gcc, clang]
+    runs-on: ${{ matrix.os }}
+
+    # Default C file: main.c, or the value provided via workflow_dispatch
+    env:
+      C_FILE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.file || 'main.c' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Linux compilers (macOS already has clang; gcc is usually an alias to clang there)
+      - name: Install ${{ matrix.compiler }} (Linux)
+        if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+      - name: Install clang (Linux)
+        if: runner.os == 'Linux' && matrix.compiler == 'clang'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Show compiler version
+        run: ${{ matrix.compiler }} --version || true
+
+      - name: Compile
+        run: |
+          echo "Compiling $C_FILE with ${{ matrix.compiler }}..."
+          ${{ matrix.compiler }} "$C_FILE" -O2 -Wall -Wextra -std=c11 -o app
+
+      - name: Run
+        run: |
+          echo "Running ./app"
+          set -o pipefail
+          ./app | tee "run-${{ matrix.os }}-${{ matrix.compiler }}.log"
+
+      - name: Upload executable and output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.os }}-${{ matrix.compiler }}
+          path: |
+            app
+            run-${{ matrix.os }}-${{ matrix.compiler }}.log
