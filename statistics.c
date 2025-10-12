@@ -177,7 +177,7 @@ int main ()
     correlation =
         ((number_of_values * sum_xy_values) - (sum_x_values * sum_y_values)) /
         sqrt((number_of_values * sum_x_sq_values) - (sum_x_values *
-            sum_x_values) * (number_of_values * sum_y_sq_values) -
+            sum_x_values)) * squrt((number_of_values * sum_y_sq_values) -
             (sum_y_values * sum_y_values));
 
     /*
